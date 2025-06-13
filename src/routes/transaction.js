@@ -5,6 +5,7 @@ const transactionSchema = {
       properties: {
         amount: { type: "number", minimum: 0, default: 0 },
         payee: { type: "string", default: "Unknown" },
+        imported_payee: { type: "string", default: "Unknown" },
         account: { type: "string" },
         notes: { type: "string" }
       },
@@ -19,6 +20,7 @@ const createTransaction = (request) => {
 
   return {
     payee_name: payee || "Unknown",
+    imported_payee: payee || "Unknown",
     amount: transactionAmount,
     notes: notes,
     date: new Date().toISOString().split("T")[0],
