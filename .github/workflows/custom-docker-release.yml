@@ -1,4 +1,4 @@
-name: Build multi-platform Docker Image
+name: Custom Docker Image
 
 on:
   release:
