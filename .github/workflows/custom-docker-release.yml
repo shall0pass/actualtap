@@ -38,12 +38,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Extract version parts
-              id: semver
-              env:
-                DISPATCH_TAG: ${{ github.event.inputs.tag }}
-                RELEASE_TAG: ${{ github.event.release.tag_name }}
-                REF: ${{ github.ref }}
-              run: |
+        id: semver
+        env:
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF: ${{ github.ref }}
+        run: |
                 if [ -n "$DISPATCH_TAG" ]; then
                   RAW_TAG="$DISPATCH_TAG"
                   echo "Using tag from workflow_dispatch input: $RAW_TAG"
