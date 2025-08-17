@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.10
+
+- Ignore trailing slashes in URL paths to fix compatibility with Tasker which automatically appends trailing slashes (PR #29)
+
+## v1.0.9
+
+- Update @actual-app/api to ^25.8.0
+- Add support for deposit transactions (PR #26)
+
 ## v1.0.8
 
 ### Fixed

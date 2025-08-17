@@ -4,6 +4,8 @@
     <img src="images/logo.webp" width="200" height="200">
     <br>
     <i>Automatically create transactions in <a href="https://github.com/actualbudget/actual">Actual Budget</a> when you use Tap-to-Pay on a mobile device</i>
+    <br>
+    <strong>Version 1.0.9</strong>
 </p>
 
 ## Overview
@@ -47,12 +49,14 @@ Content-Type: application/json
 {
   "account": "Checking",  // Required: Name of the account in Actual Budget
   "amount": 10.50,       // Optional: Transaction amount (defaults to 0)
-  "payee": "Starbucks"   // Optional: Name of the payee (defaults to "Unknown")
+  "payee": "Starbucks",  // Optional: Name of the payee (defaults to "Unknown")
+  "type": "payment"      // Optional: "payment" or "deposit" (defaults to "payment")
 }
 ```
 
 ### Example cURL
 ```bash
+# Regular transaction (expense)
 curl -X POST https://actualtap.yourdomain.com/transaction \
   -H "X-API-KEY: your-api-key" \
   -H "Content-Type: application/json" \
@@ -60,6 +64,17 @@ curl -X POST https://actualtap.yourdomain.com/transaction \
     "account": "Checking",
     "amount": 10.50,
     "payee": "Starbucks"
+  }'
+
+# Deposit transaction
+curl -X POST https://actualtap.yourdomain.com/transaction \
+  -H "X-API-KEY: your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account": "Checking",
+    "amount": 100.00,
+    "payee": "Refund",
+    "type": "deposit"
   }'
 ```
 
@@ -214,6 +229,86 @@ The free version of Automate allows 30 blocks to be run at once with full capabi
   - If the httprequest failed, leave the notification and return to wait for a new notification.
 
 If a request failed, you can change the Notification block to activate "Immediately" to process it.  Then change it back to "When transition"
+
+### Home Assistant
+
+#### ***Enable features in the companion app***
+
+Navigate to **Settings -> Companion App -> Manage Sensors**
+Select **Last Notification**
+  1. Enable the sensor
+  2. Select **Allow list**.  Select any apps that will be used for posting transactions.  **Google Wallet** is typically selected.
+
+#### Edit ***configuration.yaml*** for the Home Assistant server
+
+Add a section in configuration.yaml and update your actualtap url.
+```
+rest_command:
+  actualbudget:
+    url: "https://actualtap.example.com/transaction"
+    method: post
+    content_type: 'application/json'
+    headers:
+      X-API-KEY: !secret actualtap_api
+    payload: '{"account": "{{accountVar}}", "amount": "{{amountVar}}", "date": "{{dateVar}}", "payee": "{{payeeVar}}", "notes": "{{notesVar}}"}'
+
+```
+
+### Edit ***secrets.yaml***
+
+Add your api key.
+
+```
+actualtap_api: "YOUR API KEY"
+```
+
+### Create an Automation
+
+Navigate to ***Settings -> Automations and Scenes*** within Home Assistant.
+
+Create a new Automation
+
+Use the three dot menu at the top to ***"Edit in YAML"***.
+
+Paste the following code.  Replace ***"your_device"*** with your devices name.
+
+```
+alias: Google Wallet Transaction Automation
+description: ""
+triggers:
+  - entity_id: sensor.your_device_last_notification
+    trigger: state
+actions:
+  - data:
+      accountVar: >
+        {% set text = state_attr('sensor.your_device_last_notification',
+        'android.text') %} {% if text %}
+          {{ text.split(' with ')[1] if ' with ' in text else 'Unknown Account' }}
+        {% else %}
+          'Unknown Account'
+        {% endif %}
+      amountVar: >
+        {% set text = state_attr('sensor.your_device_last_notification',
+        'android.text') %} {% if text %}
+          {% set match = text | regex_findall('\$([0-9]+\.[0-9]{2})') %}
+          {{ match[0] if match else '0.00' }}
+        {% else %}
+          '0.00'
+        {% endif %}
+      dateVar: "{{ now().date() }}"
+      payeeVar: >-
+        {{ state_attr('sensor.your_device_last_notification', 'android.title')
+        }}
+      notesVar: Added with Home Assistant
+    response_variable: httpresponse
+    action: rest_command.actualbudget
+  - data:
+      level: info
+      message: "REST Response: {{ httpresponse }}"
+    action: system_log.write
+```
+
+
 
 ## Caddy
 
