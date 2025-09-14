@@ -1,5 +1,5 @@
 const fastify = require("fastify")({ logger: true, ignoreTrailingSlash: true });
-const { version } = require("../package.json");
+const { version } = require("package.json");
 
 // Global authentication hook - registered at root level to apply to all routes
 fastify.addHook("preHandler", async (request, reply) => {
