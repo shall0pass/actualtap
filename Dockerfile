@@ -17,4 +17,4 @@ ADD ./src /app
 EXPOSE 3001
 
 # start the app
-CMD ["node", "server.js"]
+CMD ["node", "./src/server.js"]
