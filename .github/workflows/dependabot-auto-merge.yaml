@@ -3,6 +3,7 @@ name: Dependabot Auto-Merge @actual-app/api Updates
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: write
