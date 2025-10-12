@@ -46,7 +46,7 @@ jobs:
           
           # Calculate new app version (increment patch version)
           IFS='.' read -r major minor patch <<< "$CURRENT_APP_VERSION"
-          NEW_APP_VERSION="$major.$minor.$((patch + 1))"
+          NEW_APP_VERSION="$current_api_version"
           echo "new_app_version=$NEW_APP_VERSION" >> $GITHUB_OUTPUT
           
           echo "Current @actual-app/api version: ${{ steps.metadata.outputs.previous-version }}"
