@@ -1,8 +1,51 @@
 # Changelog
 
+## v1.0.21
+
+- Added sanity check after budget download to detect silent failures (e.g., out-of-sync migrations)
+- Server now fails to start with a clear error message when budget fails to open due to version mismatch
+- Updated troubleshooting docs with version mismatch error guidance
+- Converted to multi-stage Docker build to remove CVE-2025-64756 (glob) and CVE-2025-64118 (tar) from runtime image
+- Added integration tests for transaction API and initialization failures (12 tests total)
+- Transaction endpoint now returns transaction ID in response for test cleanup support
+
+## v1.0.20
+
+- Update @actual-app/api from 25.11.0 to 25.12.0
+
+## v1.0.19
+
+- Added `/health` endpoint and Docker Compose healthcheck for service monitoring
+- Removed redundant manual environment variable validation code in favor of `@fastify/env` built-in validation
+- Simplified API key check (removed case-sensitivity redundancy) and fixed hook registration order to safely use `fastify.config`
+- Updated `/transaction` route to distinguish between invalid user input (400) and server/API failures (500), improving debugging
+- Removed dead code and consolidated hardcoded operational constants (timeout/retries) for cleaner maintenance
+- **Bug Fix:** Transaction dates now respect the TZ environment variable instead of always using UTC (#53)
+- **Bug Fix:** Fixed env plugin to use `fastify-plugin` wrapper, ensuring `fastify.config` is properly available to subsequent plugins
+
+## v1.0.18
+
+- Increased `pluginTimeout` in server configuration from 30s to 120s to prevent crashes during budget download retries on slow connections
+
+## v1.0.17
+
+- Bump @actual-app/api from 25.10.0 to 25.11.0
+- Add pino-pretty for better log formatting
+- **Major Improvement:** Enhanced error handling in actualConnector plugin with specific error messages:
+  - URL validation with protocol checking
+  - Network connectivity verification with timeout and connection error detection
+  - Authentication verification with clear password error messages
+  - Budget existence verification with available budget IDs listed
+  - Encryption password validation with specific error messages
+  - Added retry logic for budget downloads (3 attempts with 2s delay) to handle transient network failures
+- Improved GitHub Actions workflow:
+  - Simplified CHANGELOG.md update process using sed instead of awk
+  - Updated token authentication from PAT_TOKEN to GITHUB_TOKEN
+- Code formatting improvements for consistency
+
 ## v1.0.16
 
-- Bump @actual-app/api from 25.9.0 to 25.10.0 
+- Bump @actual-app/api from 25.9.0 to 25.10.0
 
 ## v1.0.15
 - **Major Change:** Now uses OS temporary directories instead of persistent storage

@@ -7,4 +7,5 @@ node_modules/
 /bruno/environments/*
 local.sh
 .claude
-bruno/
+docs/
+.worktrees/
