@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-            ref: ${{ github.event.release.tag_name }}
+            fetch-depth: 0  # Fetch all history including tags
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -37,16 +37,28 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest tag found: $LATEST_TAG"
+
       - name: Extract version parts
         id: semver
         env:
           DISPATCH_TAG: ${{ github.event.inputs.tag }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          WORKFLOW_RUN_TAG: ${{ steps.get_tag.outputs.tag }}
           REF: ${{ github.ref }}
         run: |
           if [ -n "$DISPATCH_TAG" ]; then
             RAW_TAG="$DISPATCH_TAG"
             echo "Using tag from workflow_dispatch input: $RAW_TAG"
+          elif [ -n "$WORKFLOW_RUN_TAG" ]; then
+            RAW_TAG="$WORKFLOW_RUN_TAG"
+            echo "Using tag from workflow_run (latest tag): $RAW_TAG"
           elif [ -n "$RELEASE_TAG" ]; then
             RAW_TAG="$RELEASE_TAG"
             echo "Using tag from release event: $RAW_TAG"
