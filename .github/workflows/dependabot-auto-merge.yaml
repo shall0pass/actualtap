@@ -3,6 +3,7 @@ name: Dependabot Auto-Merge @actual-app/api Updates
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -46,7 +47,7 @@ jobs:
           
           # Calculate new app version (increment patch version)
           IFS='.' read -r major minor patch <<< "$CURRENT_APP_VERSION"
-          NEW_APP_VERSION="$major.$minor.$((patch + 1))"
+          NEW_APP_VERSION="$current_api_version"
           echo "new_app_version=$NEW_APP_VERSION" >> $GITHUB_OUTPUT
           
           echo "Current @actual-app/api version: ${{ steps.metadata.outputs.previous-version }}"
@@ -97,4 +98,32 @@ jobs:
           gh pr merge --squash --auto "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.DEPENDABOT_MERGE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    needs: [approve-and-merge]
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Get app version
+        id: version
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.app_version }}
+          name: v${{ steps.version.outputs.app_version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
