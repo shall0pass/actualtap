@@ -9,6 +9,7 @@ const transactionSchema = {
         payee: { type: "string", default: "Unknown" },
         account: { type: "string" },
         notes: { type: "string" },
+        date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
         type: {
           type: "string",
           enum: ["payment", "deposit"],
@@ -20,9 +21,37 @@ const transactionSchema = {
   },
 };
 
+// The schema pattern guarantees YYYY-MM-DD shape; this catches impossible
+// dates like 2026-02-31 that a Date round-trip silently rolls over
+const isValidDate = (dateStr) => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
+// iOS Shortcuts passes the Tap-to-Pay amount as locale-formatted text, so the
+// string may carry a currency symbol and use either "," or "." as the decimal
+// separator (e.g. "£12.34", "12,34", "1.234,56 €")
+const parseAmount = (raw) => {
+  let value = raw.replace(/[^\d.,-]/g, "");
+  const lastComma = value.lastIndexOf(",");
+  const lastDot = value.lastIndexOf(".");
+
+  if (lastComma > -1 && lastDot > -1) {
+    // Both present: the later one is the decimal separator, the other is a thousands separator
+    value =
+      lastComma > lastDot ? value.replace(/\./g, "").replace(",", ".") : value.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    const isDecimalComma = value.indexOf(",") === lastComma && value.length - lastComma - 1 !== 3;
+    value = isDecimalComma ? value.replace(",", ".") : value.replace(/,/g, "");
+  }
+
+  return parseFloat(value);
+};
+
 const createTransaction = (request) => {
-  const { payee, amount: rawAmount, notes, type = "payment" } = request.body;
-  const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : rawAmount;
+  const { payee, amount: rawAmount, notes, date, type = "payment" } = request.body;
+  const amount = typeof rawAmount === "string" ? parseAmount(rawAmount) : rawAmount;
   const isDeposit = type === "deposit";
   const transactionAmount = amount !== undefined && !isNaN(amount) ? Math.round(amount * 100) * (isDeposit ? 1 : -1) : 0;
 
@@ -31,7 +60,7 @@ const createTransaction = (request) => {
     payee_name: payee || "Unknown",
     amount: transactionAmount,
     notes: notes || "",
-    date: new Date().toLocaleDateString('en-CA'),
+    date: date || new Date().toLocaleDateString('en-CA'),
     cleared: false,
   };
 };
@@ -45,7 +74,14 @@ const getAccountId = async (fastify, accountName) => {
 module.exports = async (fastify, opts) => {
   fastify.post("/transaction", transactionSchema, async (request, reply) => {
     request.log.info(`Received transaction request with body: ${JSON.stringify(request.body)}`);
-    
+
+    if (request.body.date && !isValidDate(request.body.date)) {
+      return reply.code(400).send({
+        error: "Invalid date",
+        message: `"${request.body.date}" is not a valid calendar date. Expected format: YYYY-MM-DD`,
+      });
+    }
+
     const transaction = createTransaction(request);
     const accountName = request.body.account;
     const { accountId, accounts } = await getAccountId(fastify, accountName);
